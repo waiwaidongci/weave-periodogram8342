@@ -1,0 +1,1 @@
+import {useState,useEffect} from 'react';export function useRoute(){const [route,S]=useState(location.hash.slice(1)||'overview');useEffect(()=>{const f=()=>{S(location.hash.slice(1)||'overview');window.scrollTo(0,0)};window.addEventListener('hashchange',f);return()=>window.removeEventListener('hashchange',f)},[]);return route}

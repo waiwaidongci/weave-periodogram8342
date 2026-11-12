@@ -1,0 +1,1 @@
+import {request,post,patch} from './client';export const catalogApi={studies:()=>request('/studies'),points:()=>request('/points'),plans:()=>request('/plans'),createStudy:(data:any)=>post('/studies',data),editPoint:(id:number,data:any)=>patch('/points/'+id,data),createPlan:(data:any)=>post('/plans',data)};

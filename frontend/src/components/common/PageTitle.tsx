@@ -1,0 +1,1 @@
+import type {ReactNode} from 'react';export function PageTitle({index,title,description,children}:{index:string;title:string;description:string;children?:ReactNode}){return <header className="page-title"><div><small>LINGDU / WEAVE SPECTRAL STUDIES {index}</small><h1>{title}</h1><p>{description}</p></div>{children}</header>}

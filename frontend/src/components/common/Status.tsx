@@ -1,0 +1,1 @@
+import {RUN_STATUS,NOTE_STATUS} from '../../constants/enums';export function Status({value}:{value:string}){return <span className={'status '+value}>{RUN_STATUS[value]||NOTE_STATUS[value]||value}</span>}

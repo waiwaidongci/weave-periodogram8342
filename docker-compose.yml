@@ -1,0 +1,78 @@
+name: ${COMPOSE_PROJECT_NAME:-weave-periodogram}
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: ${COMPOSE_PROJECT_NAME:-weave-periodogram}-db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-weave}
+      POSTGRES_USER: ${POSTGRES_USER:-weave}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-weave_demo}
+    ports: ["${DB_PORT:-17738}:5432"]
+    volumes: ["db-data:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  redis:
+    image: redis:7-alpine
+    container_name: ${COMPOSE_PROJECT_NAME:-weave-periodogram}-redis
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes: ["redis-data:/data"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  backend:
+    build: ./backend
+    container_name: ${COMPOSE_PROJECT_NAME:-weave-periodogram}-backend
+    environment: &backend-env
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-weave}:${POSTGRES_PASSWORD:-weave_demo}@db:5432/${POSTGRES_DB:-weave}
+      REDIS_URL: redis://redis:6379/0
+      JWT_SECRET: ${JWT_SECRET:-local-demo-weave-periodogram-change-for-deployment}
+      RATE_LIMIT_WRITES: ${RATE_LIMIT_WRITES:-60}
+      SEED_DEMO: ${SEED_DEMO:-true}
+      ARTIFACT_DIR: /artifacts
+    ports: ["${BACKEND_PORT:-19238}:8000"]
+    volumes: ["artifacts:/artifacts"]
+    depends_on:
+      db: {condition: service_healthy}
+      redis: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 5s
+      timeout: 5s
+      retries: 25
+      start_period: 20s
+  worker:
+    build: ./backend
+    container_name: ${COMPOSE_PROJECT_NAME:-weave-periodogram}-worker
+    command: ["celery", "-A", "src.worker.app", "worker", "--loglevel=info", "--concurrency=1", "--hostname=worker@%h"]
+    environment: *backend-env
+    volumes: ["artifacts:/artifacts"]
+    depends_on:
+      db: {condition: service_healthy}
+      redis: {condition: service_healthy}
+      backend: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A src.worker.app inspect ping -d worker@$$HOSTNAME --timeout 3 | grep -q pong"]
+      interval: 10s
+      timeout: 8s
+      retries: 15
+      start_period: 20s
+  frontend:
+    build: ./frontend
+    container_name: ${COMPOSE_PROJECT_NAME:-weave-periodogram}-frontend
+    ports: ["${FRONTEND_PORT:-18238}:80"]
+    depends_on:
+      backend: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+volumes:
+  db-data:
+  redis-data:
+  artifacts:
