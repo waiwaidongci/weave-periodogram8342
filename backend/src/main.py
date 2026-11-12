@@ -15,6 +15,10 @@ from src.routes import auth,source,plans,runs,notes,audit
 @asynccontextmanager
 async def lifespan(app):
  Base.metadata.create_all(engine)
+ # 既有库的轻量幂等结构演进：create_all不会ALTER已存在的表
+ if engine.dialect.name=='postgresql':
+  with engine.begin() as conn:
+   conn.execute(text("ALTER TABLE spectrum_runs ADD COLUMN IF NOT EXISTS progress JSON"))
  if SEED_DEMO:
   try:
    from scripts.seed_demo import seed

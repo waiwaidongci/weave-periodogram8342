@@ -2,3 +2,10 @@
 -- traverse_studies(name UNIQUE); traverse_points(study_id,reference UNIQUE,position UNIQUE,thickness)
 -- frequency_plans(frequencies JSON,permutations,seed); spectrum_runs(source_snapshot JSON,plan_snapshot JSON,result JSON)
 -- weave_notes(result_snapshot JSON), users, audit_logs. Numeric mappings use Double(asdecimal=False).
+--
+-- 断点续跑演进（应用启动时幂等执行）：
+-- ALTER TABLE spectrum_runs ADD COLUMN IF NOT EXISTS progress JSON;
+-- progress仅在queued/running/failed期间保存置换进度快照
+-- {version,fingerprint,total,seed,completed,null_maxima[]}，完成后清空为NULL。
+-- fingerprint绑定排队快照（测点n、rss0、观测最大功率、计划B/seed/频率），
+-- 损坏或不匹配的快照在worker校验时明确拒绝，不允许拼出成功结果。
